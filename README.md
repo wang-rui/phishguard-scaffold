@@ -172,6 +172,366 @@ python -m training.ray_tune_hyperparams --num-samples 20 --max-epochs 5
 python -m training.train_mlflow --config configs/best_config_ray.yaml
 ```
 
+## 📋 **Detailed Running Instructions**
+
+### **🎯 Quick Navigation**
+- **[First Time? Start Here](#1-quick-demo-run-recommended-for-first-time-users)** - Get up and running in 5 minutes
+- **[Prerequisites & Installation](#prerequisites--installation)** - System requirements and setup
+- **[Basic Usage](#basic-usage-examples)** - Simple training and evaluation
+- **[Advanced Features](#advanced-usage)** - MLflow, Ray Tune, distributed training
+- **[Real Data](#working-with-real-data)** - Twitter API and custom datasets
+- **[Configuration](#configuration-guide)** - Customize model and training settings
+- **[Troubleshooting](#troubleshooting-guide)** - Common issues and solutions
+- **[Optimization](#performance-optimization-tips)** - Speed up training and improve quality
+- **[Production](#production-deployment)** - Deploy trained models
+
+---
+
+### **Prerequisites & Installation**
+
+1. **System Requirements:**
+   ```bash
+   # Check Python version (3.8+ required)
+   python --version
+   
+   # Check available GPU (optional but recommended)
+   nvidia-smi  # For NVIDIA GPUs
+   ```
+
+2. **Install Dependencies:**
+   ```bash
+   # Clone the repository
+   git clone <your-repo-url>
+   cd phishguard-scaffold
+   
+   # Install Python dependencies
+   pip install -r requirements.txt
+   
+   # Optional: Install development dependencies
+   pip install black ruff pytest  # For code formatting and testing
+   ```
+
+3. **Verify Installation:**
+   ```bash
+   # Test basic imports
+   python -c "from training.train import run; print('✅ Installation successful!')"
+   ```
+
+### **Basic Usage Examples**
+
+#### **1. Quick Demo Run (Recommended for First-Time Users)**
+```bash
+# Generate synthetic demo data (5K tweets, 1K users)
+python scripts/generate_demo_data.py --tweets 5000 --users 1000
+
+# Run basic training with demo data
+python -m training.train --config configs/config.yaml
+
+# View results
+cat runs/phishguard_exp/final_results.yaml
+```
+
+#### **2. Training with Custom Configuration**
+```bash
+# Create custom config (copy and modify)
+cp configs/config.yaml configs/my_config.yaml
+# Edit configs/my_config.yaml as needed
+
+# Run with custom config
+python -m training.train --config configs/my_config.yaml
+```
+
+#### **3. Evaluation Only (No Training)**
+```bash
+# Evaluate with pre-trained model checkpoints
+python -m training.train --config configs/config.yaml --eval-only
+```
+
+### **Advanced Usage**
+
+#### **MLflow Experiment Tracking**
+```bash
+# 1. Set up MLflow experiment tracking
+python scripts/quick_start_mlflow_ray.py --setup
+
+# 2. Run single tracked experiment
+python -m training.train_mlflow --config configs/mlflow_config.yaml \
+    --experiment-name "PhishGuard_Research" \
+    --run-name "baseline_experiment"
+
+# 3. Start MLflow UI to view results
+mlflow ui --host 0.0.0.0 --port 5000
+# Open: http://localhost:5000
+```
+
+#### **Hyperparameter Optimization with Ray Tune**
+```bash
+# Basic hyperparameter search (20 trials)
+python -m training.ray_tune_hyperparams \
+    --config configs/mlflow_config.yaml \
+    --num-samples 20 \
+    --max-epochs 5
+
+# Advanced hyperparameter search with custom parameters
+python scripts/run_mlflow_experiments.py \
+    --experiment-type lr \
+    --config configs/mlflow_config.yaml
+```
+
+#### **Distributed Training**
+```bash
+# Multi-GPU training (if available)
+python -m training.ray_tune_hyperparams \
+    --config configs/mlflow_config.yaml \
+    --distributed
+
+# Check GPU utilization
+watch -n 1 nvidia-smi
+```
+
+### **Working with Real Data**
+
+#### **Option 1: Twitter API Collection**
+```bash
+# 1. Get Twitter API credentials from developer.twitter.com
+export TWITTER_BEARER_TOKEN="your_bearer_token_here"
+
+# 2. Collect real tweets
+python scripts/collect_twitter_data.py \
+    --output data/tweets.csv \
+    --count 10000 \
+    --keywords "phishing,scam,bitcoin,cryptocurrency"
+
+# 3. Train with real data
+python -m training.train --config configs/config.yaml
+```
+
+#### **Option 2: Format Existing Dataset**
+```bash
+# Format your existing CSV dataset
+python scripts/format_existing_data.py \
+    --input your_dataset.csv \
+    --output data/tweets.csv \
+    --text-col "message_content" \
+    --label-col "is_malicious" \
+    --user-col "user_id"
+
+# Verify data format
+head -n 5 data/tweets.csv
+
+# Train with formatted data
+python -m training.train --config configs/config.yaml
+```
+
+### **Configuration Guide**
+
+#### **Key Configuration Parameters**
+```yaml
+# Essential settings in configs/config.yaml
+
+model:
+  model_name_or_path: "meta-llama/Llama-2-7b-hf"  # Main model
+  fallback_model: "distilbert-base-uncased"        # CPU fallback
+  peft: lora                                       # Enable LoRA
+  max_length: 512                                  # Token length
+
+train:
+  batch_size: 8        # Adjust based on GPU memory
+  num_epochs: 5        # Training epochs
+  lr: 1e-4            # Learning rate
+  fp16: true          # Mixed precision (saves memory)
+
+loss:
+  lambda_cls: 1.0     # Classification loss weight
+  lambda_adv: 0.3     # Adversarial loss weight  
+  mu_prop: 0.2        # Propagation loss weight
+```
+
+#### **Memory Optimization Settings**
+```bash
+# For limited GPU memory (< 8GB)
+# Edit configs/config.yaml:
+# - Set batch_size: 4 or 2
+# - Set fp16: true
+# - Set gradient_checkpointing: true
+# - Use fallback_model: "distilbert-base-uncased"
+
+# For CPU-only training
+# Edit configs/config.yaml:
+# - Set model_name_or_path: "distilbert-base-uncased"
+# - Set peft: null
+# - Set fp16: false
+```
+
+### **Monitoring & Evaluation**
+
+#### **Real-time Training Monitoring**
+```bash
+# Terminal 1: Start training
+python -m training.train_mlflow --config configs/mlflow_config.yaml
+
+# Terminal 2: Monitor with MLflow UI
+mlflow ui --host 0.0.0.0 --port 5000
+
+# Terminal 3: Monitor system resources
+watch -n 2 'nvidia-smi; echo ""; free -h'
+```
+
+#### **Evaluate Model Performance**
+```bash
+# Basic evaluation metrics
+python -c "
+from training.train import run
+results = run('configs/config.yaml', eval_only=True)
+print(f'Accuracy: {results[\"test_metrics\"][\"accuracy\"]:.3f}')
+print(f'F1-Score: {results[\"test_metrics\"][\"f1\"]:.3f}')
+print(f'AUC: {results[\"test_metrics\"][\"auc\"]:.3f}')
+"
+
+# Detailed analysis with intervention impact
+python scripts/analyze_results.py runs/phishguard_exp/
+```
+
+### **Troubleshooting Guide**
+
+#### **Common Issues & Solutions**
+
+**1. CUDA Out of Memory:**
+```bash
+# Solution: Reduce batch size and enable optimizations
+# In configs/config.yaml:
+train:
+  batch_size: 2  # Reduce from 8
+  fp16: true
+  gradient_checkpointing: true
+```
+
+**2. Model Loading Failures:**
+```bash
+# Check if model name is correct
+python -c "
+from transformers import AutoTokenizer
+try:
+    tokenizer = AutoTokenizer.from_pretrained('meta-llama/Llama-2-7b-hf')
+    print('✅ Model accessible')
+except Exception as e:
+    print(f'❌ Model error: {e}')
+"
+
+# Use fallback model
+# In configs/config.yaml set: model_name_or_path: "distilbert-base-uncased"
+```
+
+**3. Data Loading Issues:**
+```bash
+# Check data file format
+python -c "
+import pandas as pd
+df = pd.read_csv('data/tweets.csv')
+print(f'Data shape: {df.shape}')
+print(f'Columns: {list(df.columns)}')
+print(f'Sample:\\n{df.head(2)}')
+"
+
+# Regenerate demo data if needed
+python scripts/generate_demo_data.py --tweets 1000 --users 200
+```
+
+**4. Import Errors:**
+```bash
+# Check Python path
+python -c "import sys; print('\\n'.join(sys.path))"
+
+# Install missing dependencies
+pip install -r requirements.txt
+
+# Run from project root
+cd /path/to/phishguard-scaffold
+python -m training.train --config configs/config.yaml
+```
+
+### **Performance Optimization Tips**
+
+#### **Speed Up Training:**
+```bash
+# 1. Use mixed precision
+# Set fp16: true in config
+
+# 2. Increase batch size (if memory allows)
+# Set batch_size: 16 or 32
+
+# 3. Use LoRA for faster fine-tuning
+# Set peft: lora, lora_r: 16
+
+# 4. Pre-compile model (PyTorch 2.0+)
+# Set compile_model: true in config
+```
+
+#### **Improve Model Quality:**
+```bash
+# 1. Use more training epochs
+# Set num_epochs: 10
+
+# 2. Tune loss weights
+# Experiment with lambda_adv: 0.5, mu_prop: 0.3
+
+# 3. Use larger model (if resources allow)
+# Set model_name_or_path: "meta-llama/Llama-2-13b-hf"
+
+# 4. Collect more/better training data
+python scripts/collect_twitter_data.py --count 50000
+```
+
+### **Development Workflow**
+
+#### **Code Quality Checks:**
+```bash
+# Format code
+black training/ scripts/ --line-length 88
+
+# Check for issues
+ruff check .
+
+# Run tests (if available)
+pytest tests/ -v
+```
+
+#### **Experiment Tracking:**
+```bash
+# Compare multiple experiments
+python scripts/run_mlflow_experiments.py --experiment-type lr
+python scripts/run_mlflow_experiments.py --experiment-type loss-weights
+
+# View comparisons in MLflow UI
+mlflow ui
+```
+
+### **Production Deployment**
+
+#### **Export Trained Model:**
+```bash
+# Save model for inference
+python -c "
+from training.train import run
+from models.llama_classifier import PhishGuardClassifier
+import torch
+
+# Load trained model
+model = PhishGuardClassifier('path/to/checkpoint')
+torch.save(model.state_dict(), 'phishguard_production.pth')
+print('Model saved for production use')
+"
+```
+
+#### **Batch Inference:**
+```bash
+# Run inference on new data
+python scripts/batch_inference.py \
+    --model runs/phishguard_exp/best_model.pth \
+    --input new_tweets.csv \
+    --output predictions.csv
+```
+
 ## 📊 Expected Performance
 
 ### Model Performance (with 10k+ real tweets)

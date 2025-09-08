@@ -64,8 +64,8 @@ class PhishGuardDataset(Dataset):
 class TrainingConfig:
     """Enhanced training configuration with MLflow integration."""
     # Model config
-    model_name_or_path: str = "distilbert-base-uncased"
-    fallback_model: str = "distilbert-base-uncased"
+    model_name_or_path: str = "meta-llama/Llama-2-7b-hf"  # Primary LLaMA model as per research
+    fallback_model: str = "distilbert-base-uncased"       # CPU/resource-constrained fallback
     peft: Optional[str] = None
     lora_r: int = 16
     max_length: int = 512
