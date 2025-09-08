@@ -1,0 +1,119 @@
+# PhishGuard Configuration for MLflow and Ray Integration
+# Enhanced configuration with experiment tracking and distributed training support
+
+# Model Configuration
+model:
+  model_name_or_path: "meta-llama/Llama-2-7b-hf"  # Primary model
+  fallback_model: "distilbert-base-uncased"        # Fallback for resource constraints
+  peft: "lora"                                     # Parameter-efficient fine-tuning
+  lora_r: 16                                       # LoRA rank
+  max_length: 512                                  # Maximum sequence length
+
+# Training Configuration
+train:
+  batch_size: 8                                    # Batch size
+  num_epochs: 5                                    # Number of training epochs
+  lr: 1e-4                                         # Learning rate
+  weight_decay: 0.01                               # Weight decay for regularization
+  warmup_steps: 100                                # Warmup steps for learning rate scheduler
+  fp16: true                                       # Mixed precision training
+  gradient_checkpointing: true                     # Memory efficient training
+
+# Joint Loss Configuration
+loss:
+  lambda_cls: 1.0                                  # Classification loss weight
+  lambda_adv: 0.3                                  # Adversarial loss weight
+  mu_prop: 0.2                                     # Propagation loss weight
+
+# Adversarial Training Configuration
+adversarial:
+  epsilon: 0.1                                     # Perturbation magnitude
+  alpha: 0.01                                      # Step size for adversarial examples
+  steps: 3                                         # Number of adversarial steps
+
+# Social Network Propagation Configuration
+propagation:
+  ic_samples: 100                                  # Independent Cascade simulation samples
+  budget: 20                                       # Intervention budget (number of nodes)
+  topk_candidates: 200                             # Top-k candidates for intervention
+
+# MLflow Configuration
+mlflow:
+  experiment_name: "PhishGuard_Production"         # MLflow experiment name
+  tracking_uri: "mlruns"                          # MLflow tracking URI (can be remote)
+  run_name: null                                   # Auto-generated if null
+  log_model: true                                  # Whether to log model artifacts
+  log_params: true                                 # Whether to log parameters
+  log_metrics: true                                # Whether to log metrics
+
+# Ray Configuration
+ray:
+  use_ray: false                                   # Enable Ray for distributed training
+  num_workers: 2                                   # Number of distributed workers
+  gpus_per_worker: 0.5                            # GPU allocation per worker
+  cpus_per_worker: 2                              # CPU allocation per worker
+
+# Ray Tune Configuration (for hyperparameter optimization)
+ray_tune:
+  num_samples: 20                                  # Number of hyperparameter trials
+  max_concurrent_trials: 4                        # Maximum concurrent trials
+  scheduler: "asha"                                # Early stopping scheduler (asha, hyperband)
+  search_algorithm: "optuna"                       # Search algorithm (random, optuna, hyperopt)
+  
+  # Hyperparameter search spaces (will be used by Ray Tune)
+  search_space:
+    lr: 
+      type: "loguniform"
+      low: 1e-5
+      high: 1e-3
+    batch_size:
+      type: "choice"
+      values: [4, 8, 16, 32]
+    lambda_adv:
+      type: "uniform"
+      low: 0.1
+      high: 0.5
+    mu_prop:
+      type: "uniform" 
+      low: 0.1
+      high: 0.5
+
+# Data Configuration
+data:
+  tweets_path: "data/tweets.csv"                   # Path to tweets dataset
+  edges_path: "data/edges.csv"                     # Path to social network edges
+  text_col: "text"                                 # Text column name
+  label_col: "label"                               # Label column name
+  user_id_col: "user_id"                          # User ID column name
+  test_size: 0.2                                   # Test set proportion
+  val_size: 0.1                                    # Validation set proportion
+  random_seed: 42                                  # Random seed for reproducibility
+
+# Output Configuration
+output:
+  output_dir: "runs"                               # Output directory for checkpoints and logs
+  save_steps: 1000                                 # Save model every N steps
+  eval_steps: 500                                  # Evaluate model every N steps
+  logging_steps: 100                               # Log metrics every N steps
+  save_total_limit: 3                              # Maximum number of checkpoints to keep
+
+# Compute Configuration
+compute:
+  device: "auto"                                   # Device selection (auto, cpu, cuda)
+  mixed_precision: true                            # Enable mixed precision training
+  gradient_accumulation_steps: 1                   # Gradient accumulation steps
+  max_grad_norm: 1.0                               # Gradient clipping threshold
+
+# Monitoring and Logging
+monitoring:
+  log_level: "INFO"                                # Logging level
+  disable_tqdm: false                              # Disable progress bars
+  wandb_project: null                              # Weights & Biases project (optional)
+  tensorboard_dir: null                            # TensorBoard logging directory (optional)
+
+# Advanced Configuration
+advanced:
+  compile_model: false                             # Use torch.compile for optimization
+  use_cpu_offload: false                           # Offload model to CPU when not in use
+  pin_memory: true                                 # Pin memory for faster data loading
+  dataloader_num_workers: 4                       # Number of data loader workers

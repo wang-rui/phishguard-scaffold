@@ -23,6 +23,15 @@ tweepy>=4.14.0
 # Progress bars and logging
 tqdm>=4.66.2
 
+# MLOps and Experiment Tracking
+mlflow>=2.8.0
+mlflow[extras]>=2.8.0
+
+# Distributed Computing and Hyperparameter Tuning
+ray[tune]>=2.8.0
+ray[train]>=2.8.0
+optuna>=3.4.0  # Advanced hyperparameter optimization
+
 # Optional: For enhanced CUDA support
 # torch-audio
 # torch-vision

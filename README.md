@@ -92,6 +92,13 @@ graph TB
 - **Checkpoint Management**: Model state preservation and recovery
 - **Real Data Integration**: Twitter API collection and dataset formatting tools
 
+### 🧪 **MLOps & Experimentation**
+- **MLflow Integration**: Complete experiment tracking, model registry, and reproducible runs
+- **Ray Tune Hyperparameter Optimization**: Automated hyperparameter search with early stopping
+- **Ray Train Distributed Training**: Multi-GPU and multi-node training capabilities
+- **Experiment Comparison**: Grid search automation and result visualization
+- **Advanced Schedulers**: ASHA, Hyperband, and Optuna integration for efficient tuning
+
 ## 🚀 Quick Start
 
 ### Option 1: Use Demo Data (Fastest - 5 minutes)
@@ -137,6 +144,34 @@ python scripts/format_existing_data.py \
 python -m training.train --config configs/config.yaml
 ```
 
+### Option 4: MLflow Experiment Tracking (Recommended for Research)
+```bash
+# 1. Install MLflow and Ray dependencies
+pip install -r requirements.txt
+
+# 2. Quick start with MLflow and Ray
+python scripts/quick_start_mlflow_ray.py --setup
+
+# 3. Run single experiment with tracking
+python scripts/quick_start_mlflow_ray.py --single-experiment
+
+# 4. Start MLflow UI to view results
+python scripts/quick_start_mlflow_ray.py --start-ui
+# Access at: http://localhost:5000
+```
+
+### Option 5: Hyperparameter Optimization with Ray Tune
+```bash
+# 1. Run automated hyperparameter search
+python scripts/quick_start_mlflow_ray.py --tune-hyperparams
+
+# 2. Or run advanced hyperparameter tuning
+python -m training.ray_tune_hyperparams --num-samples 20 --max-epochs 5
+
+# 3. Use best configuration found
+python -m training.train_mlflow --config configs/best_config_ray.yaml
+```
+
 ## 📊 Expected Performance
 
 ### Model Performance (with 10k+ real tweets)
@@ -162,29 +197,35 @@ python -m training.train --config configs/config.yaml
 
 ```
 phishguard_scaffold/
+├── README.md, requirements.txt
 ├── configs/
-│   └── config.yaml              # Main configuration file
+│   ├── config.yaml              # Main configuration file
+│   └── mlflow_config.yaml       # MLflow and Ray configuration
 ├── data/
+│   ├── dataset.py              # Enhanced data loading & preprocessing
 │   ├── tweets.csv              # Tweet dataset (text, labels, metadata)
 │   └── edges.csv               # Social network edges
-├── src/
-│   ├── data/
-│   │   └── dataset.py          # Enhanced data loading & preprocessing
-│   ├── models/
-│   │   └── llama_classifier.py # LLaMA-based classifier with LoRA
-│   ├── training/
-│   │   ├── train.py           # Joint optimization training loop
-│   │   └── adversarial.py     # Adversarial training components
-│   ├── propagation/
-│   │   ├── graph.py           # Social network & IC simulation
-│   │   └── intervene.py       # Intervention strategies
-│   └── eval/
-│       └── metrics.py         # Evaluation metrics
+├── models/
+│   └── llama_classifier.py     # LLaMA-based classifier with LoRA
+├── training/
+│   ├── train.py               # Joint optimization training loop
+│   ├── train_mlflow.py        # MLflow-enhanced training with experiment tracking
+│   ├── ray_tune_hyperparams.py # Ray Tune hyperparameter optimization
+│   └── adversarial.py         # Adversarial training components
+├── propagation/
+│   ├── graph.py               # Social network & IC simulation
+│   └── intervene.py           # Intervention strategies
+├── eval/
+│   └── metrics.py             # Evaluation metrics
 ├── scripts/
-│   ├── collect_twitter_data.py    # Real Twitter data collection
-│   ├── format_existing_data.py    # Dataset formatting utility
-│   └── generate_demo_data.py      # Synthetic data generation
-└── runs/                          # Training outputs and checkpoints
+│   ├── collect_twitter_data.py      # Real Twitter data collection
+│   ├── format_existing_data.py      # Dataset formatting utility
+│   ├── generate_demo_data.py        # Synthetic data generation
+│   ├── run_mlflow_experiments.py    # Automated experiment grid search
+│   └── quick_start_mlflow_ray.py    # MLflow and Ray quick start guide
+└── runs/                            # Training outputs and checkpoints
+   ├── mlruns/                       # MLflow experiment tracking data
+   └── ray_results/                  # Ray Tune optimization results
 ```
 
 ## ⚙️ Configuration
@@ -287,6 +328,56 @@ impact = evaluate_intervention_impact(graph, intervention_nodes, risk_scores)
 print(f"Spread reduction: {impact['relative_reduction']:.1%}")
 ```
 
+### MLflow Experiment Tracking
+```python
+import mlflow
+from training.train_mlflow import MLflowPhishGuardTrainer, TrainingConfig
+
+# Configure experiment
+config = TrainingConfig(
+    experiment_name="PhishGuard_Research",
+    run_name="adversarial_loss_study",
+    lambda_adv=0.4,  # Custom adversarial weight
+    num_epochs=10
+)
+
+# Run tracked experiment
+trainer = MLflowPhishGuardTrainer(config)
+results = trainer.train()
+
+# View in MLflow UI: mlflow ui
+```
+
+### Ray Tune Hyperparameter Optimization
+```python
+from ray import tune
+from training.ray_tune_hyperparams import run_hyperparameter_optimization
+
+# Define custom search space
+search_space = {
+    "lr": tune.loguniform(1e-5, 1e-3),
+    "lambda_adv": tune.uniform(0.1, 0.5),
+    "batch_size": tune.choice([8, 16, 32])
+}
+
+# Run optimization
+results, best_trial = run_hyperparameter_optimization(
+    num_samples=50,
+    max_num_epochs=10,
+    gpus_per_trial=0.25
+)
+
+print(f"Best F1 score: {best_trial.metrics['f1']:.4f}")
+```
+
+### Distributed Training with Ray
+```python
+from training.ray_tune_hyperparams import distributed_training_example
+
+# Run distributed training across multiple GPUs
+results = distributed_training_example("configs/mlflow_config.yaml")
+```
+
 ## 📈 Extending the Framework
 
 ### Adding New Models
@@ -346,7 +437,7 @@ If you use this framework in your research, please cite:
 ```bibtex
 @article{phishguard2024,
   title={Joint Semantic Detection and Dissemination Control of Phishing Attacks on Social Media via LLaMA-Based Modeling},
-  author={[Author Names]},
+  author={Rui Wang},
   journal={[Conference/Journal]},
   year={2024},
   url={https://www.researchgate.net/profile/Rui-Wang-680/publication/391055007_Joint_Semantic_Detection_and_Dissemination_Control_of_Phishing_Attacks_on_Social_Media_via_LLama-_Based_Modeling/links/6809428660241d514016cc4d/Joint-Semantic-Detection-and-Dissemination-Control-of-Phishing-Attacks-on-Social-Media-via-LLama-Based-Modeling.pdf},
