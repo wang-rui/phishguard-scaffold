@@ -7,15 +7,15 @@ import logging
 from typing import Dict, List, Optional
 
 # Enhanced imports for the PhishGuard framework
-from src.data.dataset import load_and_split
-from src.models.llama_classifier import PhishGuardClassifier, TextClassifier  # Backward compatibility
-from src.training.adversarial import compute_adversarial_loss, adversarial_perturbation, kl_divergence_with_logits
-from src.eval.metrics import compute_cls_metrics
-from src.propagation.graph import (
+from data.dataset import load_and_split
+from models.llama_classifier import PhishGuardClassifier, TextClassifier  # Backward compatibility
+from training.adversarial import compute_adversarial_loss, adversarial_perturbation, kl_divergence_with_logits
+from eval.metrics import compute_cls_metrics
+from propagation.graph import (
     load_graph, construct_social_graph, greedy_minimize_spread, 
     ic_spread, compute_propagation_loss
 )
-from src.propagation.intervene import (
+from propagation.intervene import (
     advanced_risk_assessment, pick_candidates, evaluate_intervention_impact
 )
 

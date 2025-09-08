@@ -10,6 +10,8 @@ This repository implements the complete research framework described in *"Joint 
 
 ## 🏗️ System Architecture
 
+*Alternative view: [Architecture Diagram PNG](architecture_diagram.png)*
+
 ```mermaid
 graph TB
     subgraph "Data Layer"
@@ -26,10 +28,10 @@ graph TB
     subgraph "Training Framework"
         CLS --> L1[Classification Loss<br/>L_cls = CrossEntropy]
         SE --> ADV[Adversarial Training<br/>• Semantic perturbation<br/>• KL divergence<br/>• Distribution sharpening]
-        ADV --> L2[Adversarial Loss<br/>L_adv = KL(clean||perturbed)]
+        ADV --> L2[Adversarial Loss<br/>KL divergence robustness]
         
-        GC --> PG[Propagation Graph<br/>G = (V,E)<br/>• User nodes<br/>• Interaction edges]
-        PG --> IC[Independent Cascade<br/>• Diffusion simulation<br/>• Spread estimation σ(S)]
+        GC --> PG[Propagation Graph<br/>G with nodes V and edges E<br/>• User nodes<br/>• Interaction edges]
+        PG --> IC[Independent Cascade<br/>• Diffusion simulation<br/>• Spread estimation σS]
         IC --> L3[Propagation Loss<br/>L_prop = Expected spread]
         
         L1 --> JO[Joint Optimization<br/>L_total = L_cls + λ·L_adv + μ·L_prop]
@@ -101,7 +103,7 @@ pip install -r requirements.txt
 python scripts/generate_demo_data.py --tweets 5000 --users 1000
 
 # 3. Train the model
-python -m src.training.train --config configs/config.yaml
+python -m training.train --config configs/config.yaml
 
 # 4. View results
 cat runs/phishguard_exp/final_results.yaml
@@ -119,7 +121,7 @@ export TWITTER_BEARER_TOKEN="your_bearer_token_here"
 python scripts/collect_twitter_data.py
 
 # 4. Train with real data
-python -m src.training.train --config configs/config.yaml
+python -m training.train --config configs/config.yaml
 ```
 
 ### Option 3: Format Existing Dataset
@@ -132,7 +134,7 @@ python scripts/format_existing_data.py \
     --label-col "is_phishing"
 
 # Train on formatted data
-python -m src.training.train --config configs/config.yaml
+python -m training.train --config configs/config.yaml
 ```
 
 ## 📊 Expected Performance
@@ -251,7 +253,7 @@ L_total = λ_cls × L_cls + λ_adv × L_adv + μ_prop × L_prop
 
 Where:
 - L_cls: Standard cross-entropy classification loss
-- L_adv: KL(clean||perturbed) adversarial robustness loss
+- L_adv: KL(clean vs perturbed) adversarial robustness loss
 - L_prop: Graph-based propagation control loss
 ```
 
@@ -259,7 +261,7 @@ Where:
 
 ### Custom Model Integration
 ```python
-from src.models.llama_classifier import PhishGuardClassifier
+from models.llama_classifier import PhishGuardClassifier
 
 # Initialize with custom model
 model = PhishGuardClassifier(
@@ -270,7 +272,7 @@ model = PhishGuardClassifier(
 
 ### Programmatic Training
 ```python
-from src.training.train import run
+from training.train import run
 
 # Run training programmatically
 results = run("configs/config.yaml", eval_only=False)
@@ -279,7 +281,7 @@ print(f"Final accuracy: {results['test_metrics']['accuracy']:.3f}")
 
 ### Custom Intervention Analysis
 ```python
-from src.propagation.intervene import evaluate_intervention_impact
+from propagation.intervene import evaluate_intervention_impact
 
 impact = evaluate_intervention_impact(graph, intervention_nodes, risk_scores)
 print(f"Spread reduction: {impact['relative_reduction']:.1%}")
@@ -347,6 +349,7 @@ If you use this framework in your research, please cite:
   author={[Author Names]},
   journal={[Conference/Journal]},
   year={2024},
+  url={https://www.researchgate.net/profile/Rui-Wang-680/publication/391055007_Joint_Semantic_Detection_and_Dissemination_Control_of_Phishing_Attacks_on_Social_Media_via_LLama-_Based_Modeling/links/6809428660241d514016cc4d/Joint-Semantic-Detection-and-Dissemination-Control-of-Phishing-Attacks-on-Social-Media-via-LLama-Based-Modeling.pdf},
   note={Implementation available at: https://github.com/[repo]}
 }
 ```

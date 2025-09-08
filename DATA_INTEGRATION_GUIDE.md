@@ -82,7 +82,7 @@ If you have access to academic datasets:
 python scripts/format_twitter_data.py --input your_dataset.csv --output data/tweets.csv
 
 # 3. Run the framework
-python -m src.training.train --config configs/config.yaml
+python -m training.train --config configs/config.yaml
 ```
 
 ### Method 2: Twitter API Collection
@@ -182,11 +182,11 @@ head -n 5 data/tweets.csv
 head -n 5 data/edges.csv
 
 # 2. Run a quick test
-python -m src.training.train --config configs/config.yaml --eval_only
+python -m training.train --config configs/config.yaml --eval_only
 
 # 3. Check preprocessing results
 python -c "
-from src.data.dataset import load_and_split
+from data.dataset import load_and_split
 import yaml
 with open('configs/config.yaml') as f:
     cfg = yaml.safe_load(f)

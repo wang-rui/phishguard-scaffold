@@ -316,7 +316,7 @@ def main():
     print(edges_output.head(3).to_string())
     
     print(f"\n🚀 Ready to train! Run:")
-    print(f"python -m src.training.train --config configs/config.yaml")
+    print(f"python -m training.train --config configs/config.yaml")
 
 if __name__ == "__main__":
     main()

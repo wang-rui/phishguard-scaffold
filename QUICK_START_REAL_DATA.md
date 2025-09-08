@@ -16,7 +16,7 @@ python scripts/format_existing_data.py \
     --output data/tweets.csv
 
 # 3. Train the model
-python -m src.training.train --config configs/config.yaml
+python -m training.train --config configs/config.yaml
 ```
 
 ## Option 2: Collect Live Twitter Data
@@ -35,7 +35,7 @@ pip install tweepy
 python scripts/collect_twitter_data.py
 
 # 4. Train the model
-python -m src.training.train --config configs/config.yaml
+python -m training.train --config configs/config.yaml
 ```
 
 ## Option 3: Download Public Dataset
@@ -56,7 +56,7 @@ python scripts/format_existing_data.py \
     --label-col "label_column_name"
 
 # Train
-python -m src.training.train --config configs/config.yaml
+python -m training.train --config configs/config.yaml
 ```
 
 ## Validate Your Data

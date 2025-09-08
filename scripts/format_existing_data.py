@@ -252,7 +252,7 @@ def main():
     try:
         formatter.format_dataset(args.input, args.output, overrides)
         logger.info("✅ Dataset formatting complete!")
-        logger.info(f"You can now run: python -m src.training.train --config configs/config.yaml")
+        logger.info(f"You can now run: python -m training.train --config configs/config.yaml")
     except Exception as e:
         logger.error(f"❌ Error formatting dataset: {e}")
 

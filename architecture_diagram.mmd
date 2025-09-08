@@ -1,0 +1,44 @@
+graph TB
+    subgraph "Data Layer"
+        TD[Twitter Data<br/>~100k tweets] --> DP[Data Preprocessing<br/>• Deduplication<br/>• Language filtering<br/>• Text standardization]
+        ED[Edge Data<br/>User interactions] --> GC[Graph Construction<br/>• Social network<br/>• Temporal patterns]
+    end
+    
+    subgraph "Model Architecture"
+        DP --> LLaMA[LLaMA Encoder<br/>• Semantic embeddings<br/>• Attention mechanisms<br/>• LoRA fine-tuning]
+        LLaMA --> SE[Semantic Enhancement<br/>• Deep projection<br/>• Phishing-specific attention<br/>• Risk assessment]
+        SE --> CLS[Classifier Head<br/>• 2-way classification<br/>• Confidence scoring]
+    end
+    
+    subgraph "Training Framework"
+        CLS --> L1[Classification Loss<br/>L_cls = CrossEntropy]
+        SE --> ADV[Adversarial Training<br/>• Semantic perturbation<br/>• KL divergence<br/>• Distribution sharpening]
+        ADV --> L2[Adversarial Loss<br/>KL divergence robustness]
+        
+        GC --> PG[Propagation Graph<br/>G with nodes V and edges E<br/>• User nodes<br/>• Interaction edges]
+        PG --> IC[Independent Cascade<br/>• Diffusion simulation<br/>• Spread estimation σS]
+        IC --> L3[Propagation Loss<br/>L_prop = Expected spread]
+        
+        L1 --> JO[Joint Optimization<br/>L_total = L_cls + λ·L_adv + μ·L_prop]
+        L2 --> JO
+        L3 --> JO
+    end
+    
+    subgraph "Intervention System"
+        PG --> RA[Risk Assessment<br/>• Model predictions<br/>• Network centrality<br/>• Behavioral patterns]
+        RA --> CS[Candidate Selection<br/>• Influence ranking<br/>• Activity analysis]
+        CS --> GI[Greedy Intervention<br/>• Budget optimization<br/>• Marginal gain<br/>• Impact evaluation]
+    end
+    
+    subgraph "Output"
+        JO --> PM[Trained Model<br/>• Phishing detection<br/>• Risk scoring]
+        GI --> IN[Intervention Nodes<br/>• Optimal selection<br/>• Spread minimization]
+        PM --> MT[Metrics<br/>• Accuracy: 85-95%<br/>• F1-Score: 80-92%<br/>• AUC: 90-98%]
+        IN --> PR[Propagation Reduction<br/>• 15-40% spread decrease<br/>• Cost-effectiveness]
+    end
+    
+    style LLaMA fill:#e1f5fe
+    style JO fill:#f3e5f5
+    style GI fill:#e8f5e8
+    style MT fill:#fff3e0
+    style PR fill:#fff3e0
