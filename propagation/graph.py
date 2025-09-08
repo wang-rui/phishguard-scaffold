@@ -27,7 +27,6 @@ def construct_social_graph(tweets_df: pd.DataFrame, edges_df: Optional[pd.DataFr
     cfg = cfg or {}
     
     # Configuration parameters
-    time_window_hours = cfg.get("propagation", {}).get("time_window_hours", 24)
     edge_weight_threshold = cfg.get("propagation", {}).get("edge_weight_threshold", 0.01)
     
     # Add nodes from tweet data

@@ -197,7 +197,6 @@ def load_and_split(tweets_csv: str, cfg: Dict) -> SplitData:
     if len(df) < 100:
         logger.warning(f"Very few samples after preprocessing ({len(df)}). Consider adjusting filters.")
     
-    text_col = cfg["data"]["text_col"]
     label_col = cfg["data"]["label_col"]
     
     # Split configuration

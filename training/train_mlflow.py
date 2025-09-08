@@ -167,8 +167,8 @@ class MLflowPhishGuardTrainer:
         try:
             self.graph = load_graph(self.config.edges_path)
             logger.info(f"Loaded graph with {self.graph.number_of_nodes()} nodes, {self.graph.number_of_edges()} edges")
-        except:
-            logger.warning("Could not load social graph, propagation loss will be disabled")
+        except Exception as e:
+            logger.warning(f"Could not load social graph, propagation loss will be disabled: {e}")
             self.graph = None
         
         logger.info(f"Data loaded: {len(self.train_dataset)} train, {len(self.val_dataset)} val, {len(self.test_dataset)} test")

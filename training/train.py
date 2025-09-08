@@ -17,7 +17,7 @@ from propagation.graph import (
     load_graph, greedy_minimize_spread
 )
 from propagation.intervene import (
-    pick_candidates
+    pick_candidates, risk_from_logits
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -68,7 +68,10 @@ class PhishGuardDataset(Dataset):
 TxtDS = PhishGuardDataset
 
 def set_seed(s):
-    random.seed(s); np.random.seed(s); torch.manual_seed(s); torch.cuda.manual_seed_all(s)
+    random.seed(s)
+    np.random.seed(s)
+    torch.manual_seed(s)
+    torch.cuda.manual_seed_all(s)
 
 def run(cfg_path: str, eval_only: bool=False):
     """Enhanced PhishGuard training with joint optimization framework.
@@ -130,7 +133,6 @@ def run(cfg_path: str, eval_only: bool=False):
     opt = torch.optim.AdamW(model.parameters(), lr=cfg["train"]["lr"], weight_decay=cfg["train"]["weight_decay"])
     total_steps = len(train_loader) * cfg["train"]["num_epochs"]
     sched = get_linear_schedule_with_warmup(opt, num_warmup_steps=int(total_steps*cfg["train"]["warmup_ratio"]), num_training_steps=total_steps)
-    bce = torch.nn.CrossEntropyLoss()
 
     def evaluate(dl):
         model.eval()
@@ -173,7 +175,9 @@ def run(cfg_path: str, eval_only: bool=False):
 
                 loss = cls_loss + cfg["loss"]["lambda_adv"] * adv_loss + cfg["loss"]["mu_prop"] * prop_loss
                 loss.backward()
-                opt.step(); sched.step(); opt.zero_grad()
+                opt.step()
+                sched.step()
+                opt.zero_grad()
 
             m = evaluate(val_loader)
             print("Val:", m)
