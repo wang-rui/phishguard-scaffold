@@ -1,0 +1,36 @@
+# Core ML libraries
+transformers>=4.42.0
+accelerate>=0.33.0
+peft>=0.11.1
+datasets>=2.19.0
+torch>=2.0.0
+scikit-learn>=1.4.2
+
+# Data processing
+pandas>=2.2.2
+numpy>=1.26.4
+pyyaml>=6.0.1
+
+# Network analysis and propagation modeling
+networkx>=3.2.1
+
+# Language detection for preprocessing
+langdetect>=1.0.9
+
+# Twitter data collection (optional)
+tweepy>=4.14.0
+
+# Progress bars and logging
+tqdm>=4.66.2
+
+# Optional: For enhanced CUDA support
+# torch-audio
+# torch-vision
+
+# Development and testing (optional)
+# pytest>=7.0.0
+# black>=22.0.0
+# flake8>=6.0.0
+
+# Note: For LLaMA models, you may need to install from source or use specific versions
+# depending on your hardware and CUDA setup

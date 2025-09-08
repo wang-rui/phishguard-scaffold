@@ -1,0 +1,76 @@
+# PhishGuard Framework Config - LLaMA-based phishing detection with propagation control
+seed: 42
+output_dir: runs/phishguard_exp
+
+data:
+  tweets_csv: data/tweets.csv
+  edges_csv: data/edges.csv
+  text_col: text
+  label_col: label
+  user_id_col: user_id
+  parent_user_col: parent_user_id
+  timestamp_col: timestamp
+  url_col: url
+  # Data preprocessing
+  remove_duplicates: true
+  filter_non_english: true
+  min_text_length: 10
+  max_text_length: 512
+  split:
+    train: 0.8
+    val: 0.1
+    test: 0.1
+
+model:
+  # LLaMA model configuration for deep semantic embedding
+  model_name_or_path: meta-llama/Llama-2-7b-hf  # Primary model as per research
+  fallback_model: distilbert-base-uncased        # Fallback for resource constraints
+  max_length: 512                                # Increased for better context
+  # PEFT configuration for efficient fine-tuning
+  peft: lora
+  lora_r: 16                                     # Increased rank for better adaptation
+  lora_alpha: 32                                 # Adjusted for better learning
+  lora_dropout: 0.1
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]  # LLaMA-specific
+  # Semantic embedding enhancement
+  use_pooler_output: false
+  embedding_dim: 4096                            # LLaMA hidden size
+  freeze_embeddings: false
+
+train:
+  batch_size: 8                                  # Reduced for LLaMA memory requirements
+  num_epochs: 5                                  # Increased for better convergence
+  lr: 1e-4                                       # Adjusted for LLaMA fine-tuning
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  grad_accum_steps: 4                            # Increased for effective larger batch
+  fp16: true                                     # Enable for memory efficiency
+  gradient_checkpointing: true                   # For memory optimization
+
+# Joint optimization losses as per research framework
+loss:
+  # Semantic classification loss weight
+  lambda_cls: 1.0
+  # Adversarial loss weight for robustness enhancement
+  lambda_adv: 0.3
+  # Propagation control loss weight
+  mu_prop: 0.2
+  # Adversarial perturbation parameters
+  adv_eps: 1e-2
+  adv_steps: 3                                   # Increased steps for better adversarial examples
+  # KL divergence temperature for better distribution differences
+  adv_temperature: 1.0
+
+propagation:
+  # Independent Cascade simulation parameters
+  ic_samples: 100                                # Increased for better estimation
+  diffusion_steps: 10                           # Max steps for diffusion simulation
+  # Intervention strategy parameters
+  budget: 20                                     # Number of nodes to intervene
+  topk_candidates: 200                          # Top influential users to consider
+  # Graph construction parameters
+  edge_weight_threshold: 0.01                   # Minimum edge weight to include
+  time_window_hours: 24                         # Time window for interaction edges
+  # Risk-based intervention
+  risk_threshold: 0.7                           # Minimum risk score for intervention
+  influence_decay: 0.8                          # Influence decay factor
