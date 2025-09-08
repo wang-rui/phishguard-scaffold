@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
-import numpy as np
-from typing import Dict, Optional
+from typing import Dict
 
 def kl_divergence_with_logits(p_logits, q_logits, temperature: float = 1.0):
     """Enhanced KL divergence with temperature scaling for better distribution differences.

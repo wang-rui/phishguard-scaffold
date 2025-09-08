@@ -12,7 +12,6 @@ import pandas as pd
 import numpy as np
 import random
 from datetime import datetime, timedelta
-import re
 import logging
 from typing import List, Tuple
 import argparse
@@ -303,10 +302,10 @@ def main():
     edges_output = edges_df[["src", "dst", "weight", "timestamp"]]
     edges_output.to_csv(edges_path, index=False)
     
-    logger.info(f"✅ Demo data generated successfully!")
+    logger.info("✅ Demo data generated successfully!")
     logger.info(f"📁 Tweets saved to: {tweets_path}")
     logger.info(f"📁 Edges saved to: {edges_path}")
-    logger.info(f"🔬 Dataset ready for PhishGuard training!")
+    logger.info("🔬 Dataset ready for PhishGuard training!")
     
     # Show sample data
     print("\n📋 Sample tweets:")
@@ -315,8 +314,8 @@ def main():
     print("\n📋 Sample edges:")
     print(edges_output.head(3).to_string())
     
-    print(f"\n🚀 Ready to train! Run:")
-    print(f"python -m training.train --config configs/config.yaml")
+    print("\n🚀 Ready to train! Run:")
+    print("python -m training.train --config configs/config.yaml")
 
 if __name__ == "__main__":
     main()

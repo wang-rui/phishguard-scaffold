@@ -6,8 +6,6 @@ from ray.tune.schedulers import ASHAScheduler
 import torch
 import yaml
 import mlflow
-from functools import partial
-import tempfile
 import logging
 
 from training.train_mlflow import MLflowPhishGuardTrainer, TrainingConfig

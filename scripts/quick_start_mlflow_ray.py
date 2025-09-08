@@ -5,12 +5,10 @@ This script provides a simple way to get started with experiment tracking and hy
 """
 
 import os
-import sys
 import argparse
 import logging
 import yaml
 import subprocess
-from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

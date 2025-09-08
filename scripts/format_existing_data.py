@@ -14,7 +14,7 @@ import re
 import argparse
 from datetime import datetime
 import logging
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -252,7 +252,7 @@ def main():
     try:
         formatter.format_dataset(args.input, args.output, overrides)
         logger.info("✅ Dataset formatting complete!")
-        logger.info(f"You can now run: python -m training.train --config configs/config.yaml")
+        logger.info("You can now run: python -m training.train --config configs/config.yaml")
     except Exception as e:
         logger.error(f"❌ Error formatting dataset: {e}")
 

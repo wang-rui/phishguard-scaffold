@@ -12,10 +12,7 @@ Requirements:
 
 import tweepy
 import pandas as pd
-import json
-import re
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict
 import logging
 import os
 
@@ -240,7 +237,7 @@ def main():
         logger.info(f"Saved {len(df_edges)} edges to {edges_path}")
     
     logger.info("Data collection complete!")
-    logger.info(f"Dataset summary:")
+    logger.info("Dataset summary:")
     logger.info(f"  - Total tweets: {len(df_tweets)}")
     logger.info(f"  - Phishing: {len(df_tweets[df_tweets['label'] == 1])}")
     logger.info(f"  - Legitimate: {len(df_tweets[df_tweets['label'] == 0])}")

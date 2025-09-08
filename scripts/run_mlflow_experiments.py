@@ -9,7 +9,6 @@ import yaml
 import argparse
 import itertools
 import logging
-from pathlib import Path
 from typing import Dict, List, Any
 import subprocess
 import time
@@ -137,7 +136,7 @@ class MLflowExperimentRunner:
             # Brief pause between experiments
             time.sleep(2)
         
-        logger.info(f"\n📊 Experiment Summary:")
+        logger.info("\n📊 Experiment Summary:")
         logger.info(f"✅ Successful runs: {len(successful_runs)}")
         logger.info(f"❌ Failed runs: {len(failed_runs)}")
         
@@ -266,9 +265,9 @@ def main():
         logger.error("Invalid experiment type or missing custom grid file")
         return
     
-    logger.info(f"\n🎉 All experiments completed!")
+    logger.info("\n🎉 All experiments completed!")
     logger.info(f"Successful runs: {len(successful_runs)}")
-    logger.info(f"View results in MLflow UI: mlflow ui")
+    logger.info("View results in MLflow UI: mlflow ui")
 
 if __name__ == "__main__":
     main()

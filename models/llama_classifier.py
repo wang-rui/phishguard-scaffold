@@ -2,7 +2,7 @@ from typing import Optional, Dict, Tuple
 import torch
 from torch import nn
 import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoModel
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 try:
     from peft import LoraConfig, get_peft_model
     PEFT_AVAILABLE = True
