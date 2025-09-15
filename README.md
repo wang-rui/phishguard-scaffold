@@ -798,10 +798,9 @@ If you use this framework in your research, please cite:
 @article{phishguard2024,
   title={Joint Semantic Detection and Dissemination Control of Phishing Attacks on Social Media via LLaMA-Based Modeling},
   author={Rui Wang},
-  journal={[Conference/Journal]},
+  journal={[ICCEA 2025 Proceedings]},
   year={2024},
-  url={https://www.researchgate.net/profile/Rui-Wang-680/publication/391055007_Joint_Semantic_Detection_and_Dissemination_Control_of_Phishing_Attacks_on_Social_Media_via_LLama-_Based_Modeling/links/6809428660241d514016cc4d/Joint-Semantic-Detection-and-Dissemination-Control-of-Phishing-Attacks-on-Social-Media-via-LLama-Based-Modeling.pdf},
-  note={Implementation available at: https://github.com/[repo]}
+  url={https://ieeexplore.ieee.org/document/11103392}
 }
 ```
 
