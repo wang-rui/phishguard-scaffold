@@ -10,7 +10,7 @@ This repository implements the complete research framework described in *"Joint 
 
 ## 🏗️ System Architecture
 
-*Alternative view: [Architecture Diagram PNG](architecture_diagram.png)*
+*Alternative view: [Architecture Diagram PNG](docs/architecture_diagram.png)*
 
 ```mermaid
 graph TB
@@ -757,7 +757,7 @@ results = distributed_training_example("configs/mlflow_config.yaml")
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guide](docs/CONTRIBUTING.md) for details.
 
 ### Development Setup
 ```bash
@@ -806,7 +806,7 @@ If you use this framework in your research, please cite:
 
 ## 🆘 Support
 
-- 📖 **Documentation**: See `DATA_INTEGRATION_GUIDE.md` and `IMPLEMENTATION_SUMMARY.md`
+- 📖 **Documentation**: See `docs/DATA_INTEGRATION_GUIDE.md` and `docs/REQUIREMENTS_ANALYSIS.md`
 - 🐛 **Issues**: Report bugs and feature requests via GitHub Issues
 - 💬 **Discussions**: Join our community discussions
 - 📧 **Contact**: [contact information]
