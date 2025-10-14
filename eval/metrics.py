@@ -1,25 +1,34 @@
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
-from typing import List, Optional, Dict, Any
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    roc_auc_score,
+    precision_score,
+    recall_score,
+)
+from typing import List, Optional, Dict
 import numpy as np
 
-def compute_cls_metrics(labels: List[int], preds: List[int], probs: Optional[np.ndarray] = None) -> Dict[str, float]:
+
+def compute_cls_metrics(
+    labels: List[int], preds: List[int], probs: Optional[np.ndarray] = None
+) -> Dict[str, float]:
     """Enhanced metrics computation with proper AUC calculation.
-    
+
     Args:
         labels: True labels
         preds: Predicted labels (binary)
         probs: Predicted probabilities (optional, for proper AUC calculation)
-        
+
     Returns:
         Dictionary with computed metrics
     """
     acc = accuracy_score(labels, preds)
-    f1 = f1_score(labels, preds, average='binary', zero_division=0)
-    
+    f1 = f1_score(labels, preds, average="binary", zero_division=0)
+
     # Add precision and recall
-    precision = precision_score(labels, preds, average='binary', zero_division=0)
-    recall = recall_score(labels, preds, average='binary', zero_division=0)
-    
+    precision = precision_score(labels, preds, average="binary", zero_division=0)
+    recall = recall_score(labels, preds, average="binary", zero_division=0)
+
     # Proper AUC calculation using probabilities when available
     try:
         if probs is not None:
@@ -37,11 +46,11 @@ def compute_cls_metrics(labels: List[int], preds: List[int], probs: Optional[np.
         # Log warning but don't fail
         print(f"Warning: AUC calculation failed: {e}")
         auc = float("nan")
-    
+
     return {
-        "accuracy": acc, 
-        "f1": f1, 
+        "accuracy": acc,
+        "f1": f1,
         "auc": auc,
         "precision": precision,
-        "recall": recall
+        "recall": recall,
     }
