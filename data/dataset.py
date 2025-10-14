@@ -65,6 +65,8 @@ def is_english_text(text: str) -> bool:
 def remove_duplicates(df: pd.DataFrame, text_col: str) -> pd.DataFrame:
     """Remove duplicate tweets based on text content.
     
+    Uses hash-based approach for memory efficiency with large datasets.
+    
     Args:
         df: DataFrame with tweet data
         text_col: Column name containing text
@@ -74,14 +76,24 @@ def remove_duplicates(df: pd.DataFrame, text_col: str) -> pd.DataFrame:
     """
     initial_count = len(df)
     
-    # Remove exact duplicates
+    # Remove exact duplicates first
     df = df.drop_duplicates(subset=[text_col])
     
-    # Remove near-duplicates (texts with very high similarity)
-    # For efficiency, we'll use a simple approach based on cleaned text
-    df['_cleaned_text'] = df[text_col].apply(lambda x: re.sub(r'[^a-zA-Z0-9\s]', '', str(x).lower().strip()))
-    df = df.drop_duplicates(subset=['_cleaned_text'])
-    df = df.drop(columns=['_cleaned_text'])
+    # Remove near-duplicates using hash-based approach for memory efficiency
+    # Compute hashes of cleaned text without storing the cleaned text
+    seen_hashes = set()
+    indices_to_keep = []
+    
+    for idx, text in enumerate(df[text_col]):
+        # Clean and hash text in one pass
+        cleaned = re.sub(r'[^a-zA-Z0-9\s]', '', str(text).lower().strip())
+        text_hash = hash(cleaned)
+        
+        if text_hash not in seen_hashes:
+            seen_hashes.add(text_hash)
+            indices_to_keep.append(idx)
+    
+    df = df.iloc[indices_to_keep].reset_index(drop=True)
     
     final_count = len(df)
     logger.info(f"Removed {initial_count - final_count} duplicates ({initial_count} -> {final_count})")

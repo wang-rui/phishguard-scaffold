@@ -169,14 +169,39 @@ def _validate_config_constraints(config: Dict[str, Any]) -> None:
     batch_size = get_nested_value(config, "train.batch_size")
     if batch_size is not None and batch_size <= 0:
         raise ValueError("train.batch_size must be positive")
+    if batch_size is not None and batch_size > 128:
+        logger.warning(f"Large batch size ({batch_size}) may cause memory issues")
     
     num_epochs = get_nested_value(config, "train.num_epochs")
     if num_epochs is not None and num_epochs <= 0:
         raise ValueError("train.num_epochs must be positive")
+    if num_epochs is not None and num_epochs > 100:
+        logger.warning(f"Very large num_epochs ({num_epochs}), training may take very long")
     
     lr = get_nested_value(config, "train.lr")
     if lr is not None and lr <= 0:
         raise ValueError("train.lr must be positive")
+    if lr is not None and (lr < 1e-6 or lr > 1e-2):
+        logger.warning(f"Learning rate {lr} is outside typical range [1e-6, 1e-2]")
+    
+    # Model constraints
+    max_length = get_nested_value(config, "model.max_length")
+    if max_length is not None and (max_length < 32 or max_length > 2048):
+        logger.warning(f"max_length {max_length} is outside typical range [32, 2048]")
+    
+    # Check model name format
+    model_name = get_nested_value(config, "model.model_name_or_path")
+    if model_name and not isinstance(model_name, str):
+        raise ValueError("model.model_name_or_path must be a string")
+    
+    # PEFT constraints
+    peft = get_nested_value(config, "model.peft")
+    if peft and peft not in [None, "lora", "prefix", "prompt"]:
+        logger.warning(f"Unknown PEFT method: {peft}. Supported: lora, prefix, prompt")
+    
+    lora_r = get_nested_value(config, "model.lora_r")
+    if lora_r is not None and (lora_r < 1 or lora_r > 256):
+        logger.warning(f"lora_r {lora_r} is outside typical range [1, 256]")
     
     # Split constraints
     train_split = get_nested_value(config, "data.split.train", 0.8)
@@ -187,24 +212,67 @@ def _validate_config_constraints(config: Dict[str, Any]) -> None:
     if abs(total_split - 1.0) > 1e-6:
         raise ValueError(f"Data splits must sum to 1.0, got {total_split}")
     
+    if train_split < 0.5:
+        logger.warning(f"Training split {train_split} is very small, may not train well")
+    
     # Loss weight constraints
-    if get_nested_value(config, "loss.lambda_cls") < 0:
+    lambda_cls = get_nested_value(config, "loss.lambda_cls")
+    if lambda_cls is not None and lambda_cls < 0:
         raise ValueError("loss.lambda_cls must be non-negative")
     
-    if get_nested_value(config, "loss.lambda_adv") < 0:
+    lambda_adv = get_nested_value(config, "loss.lambda_adv")
+    if lambda_adv is not None and lambda_adv < 0:
         raise ValueError("loss.lambda_adv must be non-negative")
+    if lambda_adv is not None and lambda_adv > 1.0:
+        logger.warning(f"lambda_adv {lambda_adv} is large, may dominate training")
     
-    if get_nested_value(config, "loss.mu_prop") < 0:
+    mu_prop = get_nested_value(config, "loss.mu_prop")
+    if mu_prop is not None and mu_prop < 0:
         raise ValueError("loss.mu_prop must be non-negative")
+    if mu_prop is not None and mu_prop > 1.0:
+        logger.warning(f"mu_prop {mu_prop} is large, may dominate training")
     
-    # File existence checks
+    # Adversarial training constraints
+    adv_eps = get_nested_value(config, "loss.adv_eps")
+    if adv_eps is not None and (adv_eps < 0 or adv_eps > 1.0):
+        logger.warning(f"adv_eps {adv_eps} is outside typical range [0, 1.0]")
+    
+    adv_steps = get_nested_value(config, "loss.adv_steps")
+    if adv_steps is not None and (adv_steps < 1 or adv_steps > 10):
+        logger.warning(f"adv_steps {adv_steps} is outside typical range [1, 10]")
+    
+    # Propagation constraints
+    ic_samples = get_nested_value(config, "propagation.ic_samples")
+    if ic_samples is not None and ic_samples < 10:
+        logger.warning(f"ic_samples {ic_samples} is very small, estimates may be inaccurate")
+    if ic_samples is not None and ic_samples > 1000:
+        logger.warning(f"ic_samples {ic_samples} is very large, may be slow")
+    
+    budget = get_nested_value(config, "propagation.budget")
+    if budget is not None and budget < 1:
+        logger.warning("propagation.budget < 1, no intervention will be performed")
+    
+    # File existence and permission checks
     tweets_path = get_nested_value(config, "data.tweets_csv")
-    if tweets_path and not os.path.exists(tweets_path):
-        logger.warning(f"Tweets file not found: {tweets_path}")
+    if tweets_path:
+        if not os.path.exists(tweets_path):
+            raise ValueError(f"Tweets file not found: {tweets_path}")
+        if not os.access(tweets_path, os.R_OK):
+            raise ValueError(f"No read permission for tweets file: {tweets_path}")
     
     edges_path = get_nested_value(config, "data.edges_csv")
-    if edges_path and not os.path.exists(edges_path):
-        logger.warning(f"Edges file not found: {edges_path}")
+    if edges_path:
+        if not os.path.exists(edges_path):
+            logger.warning(f"Edges file not found: {edges_path}. Propagation analysis will be limited.")
+        elif not os.access(edges_path, os.R_OK):
+            logger.warning(f"No read permission for edges file: {edges_path}")
+    
+    # Output directory checks
+    output_dir = get_nested_value(config, "output_dir")
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        if not os.access(output_dir, os.W_OK):
+            raise ValueError(f"No write permission for output directory: {output_dir}")
 
 def load_and_validate_config(config_path: str) -> Dict[str, Any]:
     """Load and validate configuration from YAML file.

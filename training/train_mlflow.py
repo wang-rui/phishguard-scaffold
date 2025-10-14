@@ -132,14 +132,25 @@ class MLflowPhishGuardTrainer:
         self.model = self.model.to(self.device)
         self.tokenizer = self.model.tokenizer
         
-        # Load and split data
-        train_df, val_df, test_df = load_and_split(
-            self.config.tweets_path,
-            text_col='text',
-            label_col='label',
-            test_size=0.2,
-            val_size=0.1
-        )
+        # Load and split data - construct config dict matching dataset.py interface
+        data_cfg = {
+            "data": {
+                "text_col": "text",
+                "label_col": "label",
+                "user_id_col": "user_id",
+                "remove_duplicates": True,
+                "filter_non_english": True,
+                "min_text_length": 10,
+                "max_text_length": self.config.max_length,
+                "split": {
+                    "train": 0.7,
+                    "val": 0.2,
+                    "test": 0.1
+                }
+            }
+        }
+        split_data = load_and_split(self.config.tweets_path, data_cfg)
+        train_df, val_df, test_df = split_data.train, split_data.val, split_data.test
         
         # Create datasets
         self.train_dataset = PhishGuardDataset(

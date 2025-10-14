@@ -196,15 +196,21 @@ def compute_adversarial_loss(model, inputs, cfg: Dict) -> torch.Tensor:
     Returns:
         Adversarial loss tensor (simplified return for easier integration)
     """
+    device = inputs["input_ids"].device
+    
     try:
         epsilon = cfg["loss"]["adv_eps"]
         steps = cfg["loss"]["adv_steps"]
         temperature = cfg["loss"].get("adv_temperature", 1.0)
-        device = inputs["input_ids"].device
         
         # Generate adversarial perturbation using improved method
-        delta = adversarial_perturbation(model, inputs, epsilon, steps, "pgd", temperature)
-        delta = safe_device_transfer(delta, device)
+        try:
+            delta = adversarial_perturbation(model, inputs, epsilon, steps, "pgd", temperature)
+            delta = safe_device_transfer(delta, device)
+        except Exception as e:
+            logger.warning(f"Adversarial perturbation generation failed: {e}. Skipping adversarial loss.")
+            # Return zero loss but allow gradient flow
+            return torch.zeros(1, device=device, requires_grad=True).squeeze()
         
         # Get clean predictions using safe method
         logits_clean = safe_get_logits(
@@ -224,19 +230,33 @@ def compute_adversarial_loss(model, inputs, cfg: Dict) -> torch.Tensor:
                 attention_mask=inputs["attention_mask"]
             )
         except Exception as e:
-            logger.warning(f"Adversarial forward pass failed: {e}. Using fallback.")
-            # Fallback: use clean logits with noise
-            logits_adv = logits_clean + torch.randn_like(logits_clean) * epsilon * 0.1
+            logger.warning(f"Adversarial forward pass failed: {e}. Using noise-based approximation.")
+            # Fallback: add small noise to clean logits for gradient approximation
+            noise = torch.randn_like(logits_clean) * epsilon * 0.01
+            logits_adv = logits_clean.detach() + noise
         
         # Compute KL divergence loss
-        kl_loss = kl_divergence_with_logits(logits_clean, logits_adv, temperature)
+        try:
+            kl_loss = kl_divergence_with_logits(logits_clean, logits_adv, temperature)
+            
+            # Validate loss is reasonable
+            if torch.isnan(kl_loss) or torch.isinf(kl_loss):
+                logger.warning("KL loss is NaN or Inf, using zero loss")
+                return torch.zeros(1, device=device, requires_grad=True).squeeze()
+            
+            return kl_loss
+            
+        except Exception as e:
+            logger.warning(f"KL divergence computation failed: {e}")
+            return torch.zeros(1, device=device, requires_grad=True).squeeze()
         
-        return kl_loss
-        
+    except KeyError as e:
+        logger.error(f"Missing configuration key for adversarial loss: {e}")
+        raise ValueError(f"Adversarial loss requires configuration keys: adv_eps, adv_steps. Missing: {e}")
     except Exception as e:
-        logger.error(f"Adversarial loss computation failed: {e}")
-        # Return small positive loss to avoid breaking training
-        return torch.tensor(1e-6, requires_grad=True, device=inputs["input_ids"].device)
+        logger.error(f"Unexpected error in adversarial loss computation: {e}")
+        # Return zero loss for unexpected errors
+        return torch.zeros(1, device=device, requires_grad=True).squeeze()
         
 def compute_adversarial_loss_detailed(model, inputs, cfg: Dict) -> Dict[str, torch.Tensor]:
     """Compute detailed adversarial loss with all components.

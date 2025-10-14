@@ -203,11 +203,11 @@ def run(cfg_path: str, eval_only: bool=False):
                 # propagation loss proxy: encourage lower risk on frequent spreaders (batch proxy)
                 # (In a full setup, compute sigma(S) on graph; here we use a differentiable proxy.)
                 try:
-                    # Get logits safely for propagation loss
-                    with torch.no_grad():
-                        logits_output = model(input_ids=input_ids, attention_mask=attn)
-                    prop_logits = logits_output.logits if hasattr(logits_output, 'logits') else logits_output
-                    prop_loss = torch.relu(prop_logits[:, 1]).mean()
+                    # Get logits for propagation loss (keep gradients for backprop)
+                    prop_logits = out.logits if hasattr(out, 'logits') else out
+                    # Encourage lower phishing scores: use phishing probability as loss
+                    prop_probs = torch.softmax(prop_logits, dim=-1)[:, 1]
+                    prop_loss = prop_probs.mean()  # Minimize average phishing probability
                 except Exception as e:
                     logger.warning(f"Propagation loss computation failed: {e}. Using zero loss.")
                     prop_loss = torch.tensor(0.0, requires_grad=True, device=device)

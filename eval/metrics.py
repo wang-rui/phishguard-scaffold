@@ -1,6 +1,8 @@
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
+from typing import List, Optional, Dict, Any
+import numpy as np
 
-def compute_cls_metrics(labels, preds, probs=None):
+def compute_cls_metrics(labels: List[int], preds: List[int], probs: Optional[np.ndarray] = None) -> Dict[str, float]:
     """Enhanced metrics computation with proper AUC calculation.
     
     Args:

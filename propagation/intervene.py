@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def risk_from_logits(user_ids, logits) -> Dict:
+def risk_from_logits(user_ids: List[str], logits: torch.Tensor) -> Dict[str, float]:
     """Enhanced user risk calculation using predicted phishing probability.
     
     Maps user risk using predicted phishing probability of their posts,
@@ -175,7 +175,7 @@ def advanced_risk_assessment(user_ids: List[str], logits: torch.Tensor,
     return final_risks
 
 def pick_candidates(df_users: pd.Series, topk: int = 200, G: Optional[nx.DiGraph] = None, 
-                   risk_scores: Optional[Dict[str, float]] = None) -> List:
+                   risk_scores: Optional[Dict[str, float]] = None) -> List[str]:
     """Enhanced candidate selection for intervention.
     
     Selects candidate nodes for intervention based on multiple criteria:
