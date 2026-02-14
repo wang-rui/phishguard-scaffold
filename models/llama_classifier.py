@@ -116,70 +116,77 @@ class PhishGuardClassifier(nn.Module):
             return_tensors="pt",
         )
 
+    def _get_encoder(self):
+        """Return the encoder module that outputs hidden states (handles PEFT and non-PEFT, LLaMA/BERT/DistilBERT)."""
+        if hasattr(self.model, "base_model"):
+            base = self.model.base_model
+            # PEFT: LLaMA has base.model; DistilBERT sometimes has base = encoder (no .model)
+            encoder = getattr(base, "model", base)
+            # If encoder is a full classifier (has .distilbert/.bert), use its backbone
+            if hasattr(encoder, "distilbert"):
+                return encoder.distilbert
+            if hasattr(encoder, "bert"):
+                return encoder.bert
+            return encoder
+        if hasattr(self.model, "distilbert"):
+            return self.model.distilbert
+        if hasattr(self.model, "bert"):
+            return self.model.bert
+        if hasattr(self.model, "transformer"):
+            return self.model.transformer
+        return self.model
+
     def get_semantic_embeddings(
         self, input_ids, attention_mask
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Extract deep semantic embeddings using LLaMA backbone.
+        """Extract deep semantic embeddings using LLaMA/BERT/DistilBERT backbone.
 
         Returns:
             embeddings: Enhanced semantic representations
             attention_scores: Attention weights for interpretability
         """
-        # Get base model outputs (without classification head)
-        with torch.cuda.amp.autocast(enabled=self.peft_cfg.get("fp16", False)):
-            if hasattr(self.model, "base_model"):
-                # PEFT model
-                base_outputs = self.model.base_model.model(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    output_hidden_states=True,
-                )
+        encoder = self._get_encoder()
+        use_amp = self.peft_cfg.get("fp16", False) and torch.cuda.is_available()
+        if use_amp:
+            if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
+                with torch.amp.autocast("cuda", enabled=True):
+                    base_outputs = encoder(
+                        input_ids=input_ids,
+                        attention_mask=attention_mask,
+                        output_hidden_states=True,
+                    )
             else:
-                # Standard model - get transformer outputs
-                if hasattr(self.model, "transformer"):
-                    base_outputs = self.model.transformer(
+                with torch.cuda.amp.autocast(enabled=True):
+                    base_outputs = encoder(
                         input_ids=input_ids,
                         attention_mask=attention_mask,
                         output_hidden_states=True,
                     )
-                elif hasattr(self.model, "bert"):
-                    base_outputs = self.model.bert(
-                        input_ids=input_ids,
-                        attention_mask=attention_mask,
-                        output_hidden_states=True,
-                    )
-                elif hasattr(self.model, "distilbert"):
-                    base_outputs = self.model.distilbert(
-                        input_ids=input_ids,
-                        attention_mask=attention_mask,
-                        output_hidden_states=True,
-                    )
-                else:
-                    # Generic approach
-                    base_outputs = self.model(
-                        input_ids=input_ids,
-                        attention_mask=attention_mask,
-                        output_hidden_states=True,
-                    )
-
-            # Use last hidden state for semantic embedding
-            last_hidden_state = (
-                base_outputs.last_hidden_state
-                if hasattr(base_outputs, "last_hidden_state")
-                else base_outputs.hidden_states[-1]
+        else:
+            base_outputs = encoder(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                output_hidden_states=True,
             )
 
-            # Apply semantic projection
-            projected = self.semantic_projector(last_hidden_state)
+        # Use last hidden state for semantic embedding
+        last_hidden_state = (
+            base_outputs.last_hidden_state
+            if hasattr(base_outputs, "last_hidden_state")
+            else base_outputs.hidden_states[-1]
+        )
 
-            # Calculate attention weights for important tokens
-            attention_scores = torch.softmax(
-                self.attention_weights(projected).squeeze(-1), dim=-1
-            )
-            attention_scores = attention_scores.masked_fill(attention_mask == 0, 0)
+        # Apply semantic projection
+        projected = self.semantic_projector(last_hidden_state)
 
-            # Weighted pooling based on attention
-            embeddings = torch.sum(projected * attention_scores.unsqueeze(-1), dim=1)
+        # Calculate attention weights for important tokens
+        attention_scores = torch.softmax(
+            self.attention_weights(projected).squeeze(-1), dim=-1
+        )
+        attention_scores = attention_scores.masked_fill(attention_mask == 0, 0)
+
+        # Weighted pooling based on attention
+        embeddings = torch.sum(projected * attention_scores.unsqueeze(-1), dim=1)
 
         return embeddings, attention_scores
 

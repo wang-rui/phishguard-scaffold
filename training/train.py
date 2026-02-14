@@ -54,13 +54,19 @@ class PhishGuardDataset(Dataset):
         )
 
         item = {k: v.squeeze(0) for k, v in enc.items()}
-        item["labels"] = torch.tensor(int(row[self.label_col]))
-        item["user_id"] = str(row.get(self.user_id_col, ""))
+        # Ensure label is int (CSV may load as str or float)
+        label_val = row[self.label_col]
+        try:
+            label_val = int(float(label_val))
+        except (TypeError, ValueError):
+            label_val = 0
+        item["labels"] = torch.tensor(label_val)
+        item["user_id"] = str(row.get(self.user_id_col, "") or "")
 
-        # Additional metadata for propagation analysis
-        item["timestamp"] = row.get("timestamp", "")
-        item["url"] = row.get("url", "")
-        item["parent_user_id"] = row.get("parent_user_id", "")
+        # Coerce to str so collate never sees mixed float/str (pandas can return nan as float)
+        item["timestamp"] = str(row.get("timestamp", "") or "")
+        item["url"] = str(row.get("url", "") or "")
+        item["parent_user_id"] = str(row.get("parent_user_id", "") or "")
 
         return item
 

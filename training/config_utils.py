@@ -158,6 +158,30 @@ def set_nested_value(config: Dict[str, Any], key_path: str, value: Any) -> None:
     current[keys[-1]] = value
 
 
+def _to_float(x: Any) -> Any:
+    """Coerce to float if not None; leave None as is. Handles string numbers like '1e-4'."""
+    if x is None:
+        return None
+    if isinstance(x, (int, float)):
+        return float(x)
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return x
+
+
+def _to_int(x: Any) -> Any:
+    """Coerce to int if not None; leave None as is."""
+    if x is None:
+        return None
+    if isinstance(x, int):
+        return x
+    try:
+        return int(float(x))
+    except (TypeError, ValueError):
+        return x
+
+
 def _validate_config_constraints(config: Dict[str, Any]) -> None:
     """Validate configuration value constraints.
 
@@ -167,14 +191,18 @@ def _validate_config_constraints(config: Dict[str, Any]) -> None:
     Raises:
         ValueError: If constraints are violated
     """
-    # Training constraints
-    batch_size = get_nested_value(config, "train.batch_size")
+    # Training constraints (coerce from YAML string if needed)
+    batch_size = _to_int(get_nested_value(config, "train.batch_size"))
+    if batch_size is not None:
+        set_nested_value(config, "train.batch_size", batch_size)
     if batch_size is not None and batch_size <= 0:
         raise ValueError("train.batch_size must be positive")
     if batch_size is not None and batch_size > 128:
         logger.warning(f"Large batch size ({batch_size}) may cause memory issues")
 
-    num_epochs = get_nested_value(config, "train.num_epochs")
+    num_epochs = _to_int(get_nested_value(config, "train.num_epochs"))
+    if num_epochs is not None:
+        set_nested_value(config, "train.num_epochs", num_epochs)
     if num_epochs is not None and num_epochs <= 0:
         raise ValueError("train.num_epochs must be positive")
     if num_epochs is not None and num_epochs > 100:
@@ -182,14 +210,28 @@ def _validate_config_constraints(config: Dict[str, Any]) -> None:
             f"Very large num_epochs ({num_epochs}), training may take very long"
         )
 
-    lr = get_nested_value(config, "train.lr")
+    lr = _to_float(get_nested_value(config, "train.lr"))
+    if lr is not None:
+        set_nested_value(config, "train.lr", lr)
     if lr is not None and lr <= 0:
         raise ValueError("train.lr must be positive")
     if lr is not None and (lr < 1e-6 or lr > 1e-2):
         logger.warning(f"Learning rate {lr} is outside typical range [1e-6, 1e-2]")
 
+    weight_decay = _to_float(get_nested_value(config, "train.weight_decay"))
+    if weight_decay is not None:
+        set_nested_value(config, "train.weight_decay", weight_decay)
+    warmup_ratio = _to_float(get_nested_value(config, "train.warmup_ratio"))
+    if warmup_ratio is not None:
+        set_nested_value(config, "train.warmup_ratio", warmup_ratio)
+    grad_accum_steps = _to_int(get_nested_value(config, "train.grad_accum_steps"))
+    if grad_accum_steps is not None:
+        set_nested_value(config, "train.grad_accum_steps", grad_accum_steps)
+
     # Model constraints
-    max_length = get_nested_value(config, "model.max_length")
+    max_length = _to_int(get_nested_value(config, "model.max_length"))
+    if max_length is not None:
+        set_nested_value(config, "model.max_length", max_length)
     if max_length is not None and (max_length < 32 or max_length > 2048):
         logger.warning(f"max_length {max_length} is outside typical range [32, 2048]")
 
@@ -203,14 +245,17 @@ def _validate_config_constraints(config: Dict[str, Any]) -> None:
     if peft and peft not in [None, "lora", "prefix", "prompt"]:
         logger.warning(f"Unknown PEFT method: {peft}. Supported: lora, prefix, prompt")
 
-    lora_r = get_nested_value(config, "model.lora_r")
+    lora_r = _to_int(get_nested_value(config, "model.lora_r"))
     if lora_r is not None and (lora_r < 1 or lora_r > 256):
         logger.warning(f"lora_r {lora_r} is outside typical range [1, 256]")
 
-    # Split constraints
-    train_split = get_nested_value(config, "data.split.train", 0.8)
-    val_split = get_nested_value(config, "data.split.val", 0.1)
-    test_split = get_nested_value(config, "data.split.test", 0.1)
+    # Split constraints (coerce to float)
+    train_split = _to_float(get_nested_value(config, "data.split.train")) or 0.8
+    val_split = _to_float(get_nested_value(config, "data.split.val")) or 0.1
+    test_split = _to_float(get_nested_value(config, "data.split.test")) or 0.1
+    set_nested_value(config, "data.split.train", train_split)
+    set_nested_value(config, "data.split.val", val_split)
+    set_nested_value(config, "data.split.test", test_split)
 
     total_split = train_split + val_split + test_split
     if abs(total_split - 1.0) > 1e-6:
@@ -222,33 +267,41 @@ def _validate_config_constraints(config: Dict[str, Any]) -> None:
         )
 
     # Loss weight constraints
-    lambda_cls = get_nested_value(config, "loss.lambda_cls")
+    lambda_cls = _to_float(get_nested_value(config, "loss.lambda_cls"))
+    if lambda_cls is not None:
+        set_nested_value(config, "loss.lambda_cls", lambda_cls)
     if lambda_cls is not None and lambda_cls < 0:
         raise ValueError("loss.lambda_cls must be non-negative")
 
-    lambda_adv = get_nested_value(config, "loss.lambda_adv")
+    lambda_adv = _to_float(get_nested_value(config, "loss.lambda_adv"))
+    if lambda_adv is not None:
+        set_nested_value(config, "loss.lambda_adv", lambda_adv)
     if lambda_adv is not None and lambda_adv < 0:
         raise ValueError("loss.lambda_adv must be non-negative")
     if lambda_adv is not None and lambda_adv > 1.0:
         logger.warning(f"lambda_adv {lambda_adv} is large, may dominate training")
 
-    mu_prop = get_nested_value(config, "loss.mu_prop")
+    mu_prop = _to_float(get_nested_value(config, "loss.mu_prop"))
+    if mu_prop is not None:
+        set_nested_value(config, "loss.mu_prop", mu_prop)
     if mu_prop is not None and mu_prop < 0:
         raise ValueError("loss.mu_prop must be non-negative")
     if mu_prop is not None and mu_prop > 1.0:
         logger.warning(f"mu_prop {mu_prop} is large, may dominate training")
 
     # Adversarial training constraints
-    adv_eps = get_nested_value(config, "loss.adv_eps")
+    adv_eps = _to_float(get_nested_value(config, "loss.adv_eps"))
     if adv_eps is not None and (adv_eps < 0 or adv_eps > 1.0):
         logger.warning(f"adv_eps {adv_eps} is outside typical range [0, 1.0]")
 
-    adv_steps = get_nested_value(config, "loss.adv_steps")
+    adv_steps = _to_int(get_nested_value(config, "loss.adv_steps"))
     if adv_steps is not None and (adv_steps < 1 or adv_steps > 10):
         logger.warning(f"adv_steps {adv_steps} is outside typical range [1, 10]")
 
     # Propagation constraints
-    ic_samples = get_nested_value(config, "propagation.ic_samples")
+    ic_samples = _to_int(get_nested_value(config, "propagation.ic_samples"))
+    if ic_samples is not None:
+        set_nested_value(config, "propagation.ic_samples", ic_samples)
     if ic_samples is not None and ic_samples < 10:
         logger.warning(
             f"ic_samples {ic_samples} is very small, estimates may be inaccurate"
@@ -256,7 +309,7 @@ def _validate_config_constraints(config: Dict[str, Any]) -> None:
     if ic_samples is not None and ic_samples > 1000:
         logger.warning(f"ic_samples {ic_samples} is very large, may be slow")
 
-    budget = get_nested_value(config, "propagation.budget")
+    budget = _to_int(get_nested_value(config, "propagation.budget"))
     if budget is not None and budget < 1:
         logger.warning("propagation.budget < 1, no intervention will be performed")
 
