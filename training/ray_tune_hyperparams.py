@@ -8,7 +8,11 @@ import yaml
 import mlflow
 import logging
 
-from training.train_mlflow import MLflowPhishGuardTrainer, TrainingConfig
+from training.train_mlflow import (
+    MLflowPhishGuardTrainer,
+    TrainingConfig,
+    training_config_from_dict,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -110,11 +114,11 @@ def run_hyperparameter_optimization(
     if not ray.is_initialized():
         ray.init(ignore_reinit_error=True)
 
-    # Load base configuration
+    # Load base configuration (nested or flat YAML)
     if os.path.exists(base_config_path):
         with open(base_config_path, "r") as f:
-            config_dict = yaml.safe_load(f)
-        base_config = TrainingConfig(**config_dict)
+            config_dict = yaml.safe_load(f) or {}
+        base_config = training_config_from_dict(config_dict)
     else:
         base_config = TrainingConfig()
 

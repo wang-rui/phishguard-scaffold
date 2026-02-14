@@ -214,6 +214,7 @@ def run(cfg_path: str, eval_only: bool = False):
 
         return compute_cls_metrics(ys, yh, probs_array)
 
+    best_f1 = -1.0
     if not eval_only:
         model.train()
         for epoch in range(cfg["train"]["num_epochs"]):
@@ -266,6 +267,32 @@ def run(cfg_path: str, eval_only: bool = False):
 
             m = evaluate(val_loader)
             print("Val:", m)
+            # Save best checkpoint by validation F1
+            if m["f1"] > best_f1:
+                best_f1 = m["f1"]
+                best_path = os.path.join(cfg["output_dir"], "best_model.pt")
+                torch.save(
+                    {
+                        "model_state_dict": model.state_dict(),
+                        "epoch": epoch + 1,
+                        "val_f1": best_f1,
+                        "config": cfg,
+                    },
+                    best_path,
+                )
+                logger.info(f"Saved best checkpoint (val_f1={best_f1:.4f}) to {best_path}")
+
+    # Save final model (last epoch)
+    if not eval_only:
+        final_path = os.path.join(cfg["output_dir"], "model.pt")
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+                "config": cfg,
+            },
+            final_path,
+        )
+        logger.info(f"Saved final model to {final_path}")
 
     # Final evaluation + simple intervention demo (if edges exist)
     m_test = evaluate(test_loader)

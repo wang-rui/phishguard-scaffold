@@ -20,6 +20,9 @@ langdetect>=1.0.9
 # Twitter data collection (optional)
 tweepy>=4.14.0
 
+# Hugging Face Hub (for publishing models)
+huggingface_hub>=0.20.0
+
 # Progress bars and logging
 tqdm>=4.66.2
 

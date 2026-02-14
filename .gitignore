@@ -1,0 +1,27 @@
+# Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Virtual envs / IDE
+.venv/
+venv/
+.env
+.idea/
+.vscode/
+
+# Training outputs
+runs/
+mlruns/
+ray_results/
+
+# Data (optional: remove if you want to track sample data)
+# data/*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Ruff
+.ruff_cache/

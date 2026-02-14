@@ -172,6 +172,38 @@ python -m training.ray_tune_hyperparams --num-samples 20 --max-epochs 5
 python -m training.train_mlflow --config configs/best_config_ray.yaml
 ```
 
+### Using the trained model
+
+After training, the model is saved under `runs/phishguard_exp/` as `best_model.pt` and `model.pt`.
+
+**Single text (command line):**
+```bash
+python -m inference.run_inference --checkpoint runs/phishguard_exp/best_model.pt --text "Claim your prize now: https://bit.ly/xyz"
+```
+
+**Batch from CSV:**
+```bash
+python -m inference.run_inference --checkpoint runs/phishguard_exp/best_model.pt --input data/tweets.csv --output predictions.csv --text-col text
+```
+
+**In Python:**
+```python
+import torch
+from models.llama_classifier import PhishGuardClassifier
+
+ckpt = torch.load("runs/phishguard_exp/best_model.pt", map_location="cpu")
+cfg = ckpt["config"]
+model = PhishGuardClassifier(cfg["model"]["model_name_or_path"], num_labels=2, peft_cfg=cfg["model"])
+model.load_state_dict(ckpt["model_state_dict"])
+model.eval()
+
+# One prediction
+inputs = model.tokenizer("Your text here", return_tensors="pt", truncation=True, max_length=cfg["model"]["max_length"])
+with torch.no_grad():
+    logits = model(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"]).logits
+p_phishing = torch.softmax(logits, dim=-1)[0, 1].item()  # P(phishing)
+```
+
 ## 📋 **Detailed Running Instructions**
 
 ### **🎯 Quick Navigation**
@@ -526,10 +558,11 @@ print('Model saved for production use')
 #### **Batch Inference:**
 ```bash
 # Run inference on new data
-python scripts/batch_inference.py \
-    --model runs/phishguard_exp/best_model.pth \
+python -m inference.run_inference \
+    --checkpoint runs/phishguard_exp/best_model.pt \
     --input new_tweets.csv \
-    --output predictions.csv
+    --output predictions.csv \
+    --text-col text
 ```
 
 ## 📊 Expected Performance
@@ -577,6 +610,8 @@ phishguard_scaffold/
 │   └── intervene.py           # Intervention strategies
 ├── eval/
 │   └── metrics.py             # Evaluation metrics
+├── inference/
+│   └── run_inference.py       # Load checkpoint & run phishing detection (CLI)
 ├── scripts/
 │   ├── collect_twitter_data.py      # Real Twitter data collection
 │   ├── format_existing_data.py      # Dataset formatting utility

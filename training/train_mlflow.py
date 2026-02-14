@@ -55,12 +55,71 @@ class PhishGuardDataset(Dataset):
             return_tensors="pt",
         )
 
-        return {
+        # Coerce label (CSV may have str/float/nan)
+        label_val = row[self.label_col]
+        try:
+            label_val = int(float(label_val))
+        except (TypeError, ValueError):
+            label_val = 0
+
+        out = {
             "input_ids": enc["input_ids"].squeeze(0),
             "attention_mask": enc["attention_mask"].squeeze(0),
-            "labels": torch.tensor(row[self.label_col], dtype=torch.long),
-            "user_id": str(row.get(self.user_id_col, f"user_{i}")),
+            "labels": torch.tensor(label_val, dtype=torch.long),
+            "user_id": str(row.get(self.user_id_col, f"user_{i}") or ""),
         }
+        # Coerce to str so collate never sees mixed float/str (pandas NaN)
+        out["timestamp"] = str(row.get("timestamp", "") or "")
+        out["url"] = str(row.get("url", "") or "")
+        out["parent_user_id"] = str(row.get("parent_user_id", "") or "")
+        return out
+
+
+def training_config_from_dict(config_dict: dict) -> "TrainingConfig":
+    """Build TrainingConfig from nested YAML (e.g. config.yaml) or flat dict."""
+    if not config_dict:
+        return TrainingConfig()
+    # Flatten nested structure (config.yaml / mlflow_config.yaml style)
+    m = config_dict.get("model") or {}
+    t = config_dict.get("train") or {}
+    loss_cfg = config_dict.get("loss") or {}
+    p = config_dict.get("propagation") or {}
+    adv = config_dict.get("adversarial") or {}
+    data = config_dict.get("data") or {}
+    mlflow_cfg = config_dict.get("mlflow") or {}
+    flat = {
+        "model_name_or_path": m.get("model_name_or_path", "meta-llama/Llama-2-7b-hf"),
+        "fallback_model": m.get("fallback_model", "distilbert-base-uncased"),
+        "peft": m.get("peft"),
+        "lora_r": int(m.get("lora_r", 16)) if m.get("lora_r") is not None else 16,
+        "max_length": int(m.get("max_length", 512)) if m.get("max_length") is not None else 512,
+        "batch_size": int(t.get("batch_size", 8)) if t.get("batch_size") is not None else 8,
+        "num_epochs": int(t.get("num_epochs", 5)) if t.get("num_epochs") is not None else 5,
+        "lr": float(t.get("lr", 1e-4)) if t.get("lr") is not None else 1e-4,
+        "weight_decay": float(t.get("weight_decay", 0.01)) if t.get("weight_decay") is not None else 0.01,
+        "warmup_steps": int(t.get("warmup_steps", 100)) if t.get("warmup_steps") is not None else (int(t.get("warmup_ratio", 0.1) * 1000) if "warmup_ratio" in t else 100),
+        "fp16": bool(t.get("fp16", True)),
+        "gradient_checkpointing": bool(t.get("gradient_checkpointing", True)),
+        "lambda_cls": float(loss_cfg.get("lambda_cls", 1.0)) if loss_cfg.get("lambda_cls") is not None else 1.0,
+        "lambda_adv": float(loss_cfg.get("lambda_adv", 0.3)) if loss_cfg.get("lambda_adv") is not None else 0.3,
+        "mu_prop": float(loss_cfg.get("mu_prop", 0.2)) if loss_cfg.get("mu_prop") is not None else 0.2,
+        "adv_epsilon": float(adv.get("epsilon", loss_cfg.get("adv_eps", 0.1))),
+        "adv_alpha": float(adv.get("alpha", 0.01)),
+        "adv_steps": int(adv.get("steps", loss_cfg.get("adv_steps", 3))),
+        "ic_samples": int(p.get("ic_samples", 100)) if p.get("ic_samples") is not None else 100,
+        "budget": int(p.get("budget", 20)) if p.get("budget") is not None else 20,
+        "topk_candidates": int(p.get("topk_candidates", 200)) if p.get("topk_candidates") is not None else 200,
+        "tweets_path": data.get("tweets_csv", "data/tweets.csv"),
+        "edges_path": data.get("edges_csv", "data/edges.csv"),
+        "output_dir": config_dict.get("output_dir", "runs"),
+        "experiment_name": mlflow_cfg.get("experiment_name", config_dict.get("experiment_name", "PhishGuard")),
+        "tracking_uri": mlflow_cfg.get("tracking_uri", "mlruns"),
+    }
+    # Override with any top-level flat keys (e.g. lr, batch_size at root)
+    for k in TrainingConfig.__dataclass_fields__:
+        if k in config_dict and not isinstance(config_dict.get(k), dict):
+            flat[k] = config_dict[k]
+    return TrainingConfig(**{k: v for k, v in flat.items() if k in TrainingConfig.__dataclass_fields__})
 
 
 @dataclass
@@ -223,10 +282,15 @@ class MLflowPhishGuardTrainer:
                 cls_loss = torch.nn.functional.cross_entropy(logits, batch["labels"])
                 cls_losses.append(cls_loss.item())
 
-                # Adversarial loss
-                adv_loss = compute_adversarial_loss(
-                    self.model, batch, self.config.adv_epsilon, self.config.adv_steps
-                )
+                # Adversarial loss (pass cfg dict expected by compute_adversarial_loss)
+                adv_cfg = {
+                    "loss": {
+                        "adv_eps": getattr(self.config, "adv_epsilon", 0.1),
+                        "adv_steps": getattr(self.config, "adv_steps", 3),
+                        "adv_temperature": 1.0,
+                    }
+                }
+                adv_loss = compute_adversarial_loss(self.model, batch, adv_cfg)
                 adv_losses.append(adv_loss.item())
 
                 # Propagation loss
@@ -519,11 +583,11 @@ def main():
     parser.add_argument("--run-name", type=str, default=None)
     args = parser.parse_args()
 
-    # Load config
+    # Load config (nested YAML or flat)
     if os.path.exists(args.config):
         with open(args.config, "r") as f:
-            config_dict = yaml.safe_load(f)
-        config = TrainingConfig(**config_dict)
+            config_dict = yaml.safe_load(f) or {}
+        config = training_config_from_dict(config_dict)
     else:
         config = TrainingConfig()
 

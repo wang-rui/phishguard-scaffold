@@ -32,6 +32,7 @@ class PhishGuardClassifier(nn.Module):
         super().__init__()
         self.num_labels = num_labels
         self.peft_cfg = peft_cfg or {}
+        _cfg = self.peft_cfg
 
         # Initialize tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -46,12 +47,12 @@ class PhishGuardClassifier(nn.Module):
                 model_name_or_path,
                 num_labels=num_labels,
                 torch_dtype=torch.float16
-                if peft_cfg.get("fp16", False)
+                if _cfg.get("fp16", False)
                 else torch.float32,
             )
             logger.info(f"Successfully loaded model: {model_name_or_path}")
         except Exception as e:
-            fallback = peft_cfg.get("fallback_model", "distilbert-base-uncased")
+            fallback = _cfg.get("fallback_model", "distilbert-base-uncased")
             logger.warning(
                 f"Failed to load {model_name_or_path}: {e}. Using fallback: {fallback}"
             )
@@ -60,16 +61,16 @@ class PhishGuardClassifier(nn.Module):
             )
 
         # Configure PEFT if specified
-        if peft_cfg and peft_cfg.get("peft") == "lora":
+        if _cfg.get("peft") == "lora":
             if not PEFT_AVAILABLE:
                 raise RuntimeError(
                     "peft not installed; set peft: null or install PEFT."
                 )
             lcfg = LoraConfig(
-                r=peft_cfg.get("lora_r", 16),
-                lora_alpha=peft_cfg.get("lora_alpha", 32),
-                lora_dropout=peft_cfg.get("lora_dropout", 0.1),
-                target_modules=peft_cfg.get(
+                r=_cfg.get("lora_r", 16),
+                lora_alpha=_cfg.get("lora_alpha", 32),
+                lora_dropout=_cfg.get("lora_dropout", 0.1),
+                target_modules=_cfg.get(
                     "target_modules", ["q_proj", "k_proj", "v_proj", "o_proj"]
                 ),
                 bias="none",
@@ -80,7 +81,7 @@ class PhishGuardClassifier(nn.Module):
 
         # Semantic embedding enhancement layers
         hidden_size = getattr(self.model.config, "hidden_size", 768)
-        self.embedding_dim = peft_cfg.get("embedding_dim", hidden_size)
+        self.embedding_dim = _cfg.get("embedding_dim", hidden_size)
 
         # Enhanced semantic projection for better phishing pattern recognition
         self.semantic_projector = nn.Sequential(
