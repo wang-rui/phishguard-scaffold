@@ -18,11 +18,12 @@ def kl_divergence_with_logits(p_logits, q_logits, temperature: float = 1.0):
     Args:
         p_logits: Clean logits (target distribution)
         q_logits: Perturbed logits (source distribution)
-        temperature: Temperature for softmax scaling
+        temperature: Temperature for softmax scaling (will be coerced to float)
 
     Returns:
         KL divergence loss
     """
+    temperature = float(temperature)
     # Apply temperature scaling for sharper distributions
     p_scaled = p_logits / temperature
     q_scaled = q_logits / temperature
@@ -38,6 +39,7 @@ def js_divergence_with_logits(p_logits, q_logits, temperature: float = 1.0):
 
     JS divergence is symmetric and provides more stable gradients compared to KL.
     """
+    temperature = float(temperature)
     p_scaled = F.softmax(p_logits / temperature, dim=-1)
     q_scaled = F.softmax(q_logits / temperature, dim=-1)
 
@@ -91,7 +93,11 @@ def semantic_perturbation(embeddings, attention_mask, epsilon: float = 1e-2):
 def adversarial_perturbation(
     model, inputs, epsilon=1e-2, steps=3, attack_type="fgsm", temperature=1.0
 ):
-    """Enhanced adversarial perturbation for maximizing distribution differences.
+    """Enhanced adversarial perturbation for maximizing distribution differences."""
+    epsilon = float(epsilon)
+    steps = int(steps) if steps is not None else 3
+    temperature = float(temperature) if temperature is not None else 1.0
+    """Docstring continued below.
 
     This implementation follows the research goal of maximizing the difference
     in model's output distribution between natural and semantically perturbed text.
@@ -213,9 +219,10 @@ def compute_adversarial_loss(model, inputs, cfg: Dict) -> torch.Tensor:
     device = inputs["input_ids"].device
 
     try:
-        epsilon = cfg["loss"]["adv_eps"]
-        steps = cfg["loss"]["adv_steps"]
-        temperature = cfg["loss"].get("adv_temperature", 1.0)
+        # Coerce from YAML (may be str e.g. "1e-2", "3")
+        epsilon = float(cfg["loss"]["adv_eps"])
+        steps = int(float(cfg["loss"]["adv_steps"]))
+        temperature = float(cfg["loss"].get("adv_temperature", 1.0))
 
         # Generate adversarial perturbation using improved method
         try:
