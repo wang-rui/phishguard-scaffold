@@ -1,0 +1,59 @@
+# PhishGuard config for training on MacBook Pro with DistilBERT
+# DistilBERT (~66M params) fits in 4–8GB RAM; use this when you don't have a GPU.
+seed: 42
+output_dir: runs/phishguard_exp
+
+data:
+  tweets_csv: data/tweets.csv
+  edges_csv: data/edges.csv
+  text_col: text
+  label_col: label
+  user_id_col: user_id
+  parent_user_col: parent_user_id
+  timestamp_col: timestamp
+  url_col: url
+  remove_duplicates: true
+  filter_non_english: true
+  min_text_length: 10
+  max_text_length: 256
+  split:
+    train: 0.8
+    val: 0.1
+    test: 0.1
+
+model:
+  # Use DistilBERT directly (no LLaMA) – runs on CPU/MPS
+  model_name_or_path: distilbert-base-uncased
+  fallback_model: distilbert-base-uncased
+  max_length: 256
+  # No LoRA for DistilBERT (optional; LoRA would need BERT-specific target_modules)
+  peft: null
+  embedding_dim: 768
+
+train:
+  batch_size: 8
+  num_epochs: 5
+  lr: 2e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  grad_accum_steps: 2
+  fp16: false
+  gradient_checkpointing: true
+
+loss:
+  lambda_cls: 1.0
+  lambda_adv: 0.3
+  mu_prop: 0.2
+  adv_eps: 1e-2
+  adv_steps: 3
+  adv_temperature: 1.0
+
+propagation:
+  ic_samples: 50
+  diffusion_steps: 10
+  budget: 20
+  topk_candidates: 200
+  edge_weight_threshold: 0.01
+  time_window_hours: 24
+  risk_threshold: 0.7
+  influence_decay: 0.8

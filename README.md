@@ -813,13 +813,27 @@ If you use this framework in your research, please cite:
 
 ## 🎯 What's Next?
 
+Planned improvements and extensions, by area and effort:
+
+| Area | Suggestion | Effort |
+|------|------------|--------|
+| **Training** | Save checkpoint + write `final_results.yaml` | Low |
+| **Scripts** | Add `batch_inference.py`, `analyze_results.py` | Low |
+| **Testing** | Add `tests/` + pytest | Low–Med |
+| **Training** | Checkpointing + early stopping | Medium |
+| **Propagation** | Use real graph propagation loss in training | Medium |
+| **Eval** | Confusion matrix, calibration, threshold sweep | Medium |
+| **Interpretability** | Token-level explanations | Medium |
+| **Deployment** | Small API + Docker | Medium |
+| **Roadmap** | Multi-language, dashboard, Twitter v2/streaming | Higher |
+
+Existing roadmap items:
+
 - [ ] Multi-language support beyond English
 - [ ] Real-time deployment pipeline
 - [ ] Integration with Twitter API v2 streaming
 - [ ] Advanced visualization dashboard
 - [ ] Federated learning capabilities
-h
-
 
 ---
 
